@@ -288,7 +288,7 @@ def escolher_vencedor_ui(match_id: str, t1: Optional[str], t2: Optional[str]) ->
 st.set_page_config(page_title="World Cup 2026 Simulator", layout="wide")
 
 st.title("World Cup 2026 Simulator – Groups & Knockout Bracket")
-
+st.markdown("Made by ArthurAAM")
 st.markdown(
     """
 This app allows you to:
@@ -444,10 +444,10 @@ with colF:
 # -------------------------------------------------------------
 # SUMMARY
 # -------------------------------------------------------------
-st.markdown("---")
+# st.markdown("---")
 # st.header("Tournament Summary")
 
 # if not('champion' in locals() and champion):
 #     st.write("Complete all selections to see the tournament winner.")
 
-st.markdown("Made by ArthurAAM")
+# st.markdown("Made by ArthurAAM")
