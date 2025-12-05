@@ -1,9 +1,6 @@
 import streamlit as st
 from typing import Dict, List, Tuple, Optional
 
-# =============================================================
-# CONFIGURE GROUPS HERE
-# =============================================================
 INITIAL_GROUPS: Dict[str, List[str]] = {
     "A": ["Mexico", "South Africa", "South Korea", "UEFA D (DEN/MKD/CZE/IRL)"],
     "B": ["Canada", "UEFA A (ITA/NIR/WAL/BIH)", "Qatar", "Switzerland"],
@@ -32,13 +29,13 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
-def validar_permutacao(choices: List[str], empty: str = "-") -> bool:
+def validate_permutation(choices: List[str], empty: str = "-") -> bool:
     if empty in choices:
         return False
     return len(choices) == len(set(choices))
 
 
-def montar_classificacao_grupos(
+def build_group_classification(
     groups: Dict[str, List[str]]
 ) -> Tuple[Dict[str, List[str]], List[str]]:
     """
@@ -73,7 +70,7 @@ def montar_classificacao_grupos(
                 )
             pos_choices.append(choice)
 
-        if validar_permutacao(pos_choices):
+        if validate_permutation(pos_choices):
             standings[g] = pos_choices
         else:
             standings[g] = []
@@ -82,7 +79,7 @@ def montar_classificacao_grupos(
     return standings, errors
 
 
-def coletar_terceiros(standings: Dict[str, List[str]]) -> List[Tuple[str, str]]:
+def get_third_places(standings: Dict[str, List[str]]) -> List[Tuple[str, str]]:
     """
     Return list of (group, team) that finished 3rd in each group.
     """
@@ -93,7 +90,7 @@ def coletar_terceiros(standings: Dict[str, List[str]]) -> List[Tuple[str, str]]:
     return thirds
 
 
-def escolher_top8_terceiros_ui(terceiros: List[Tuple[str, str]]):
+def pick_top8_third_places_ui(terceiros: List[Tuple[str, str]]):
     """
     UI to choose exactly 8 third-placed teams that qualify.
     No need to rank all 12 – just mark who goes through.
@@ -122,7 +119,7 @@ def escolher_top8_terceiros_ui(terceiros: List[Tuple[str, str]]):
 
 
 # =============================================================
-# ROUND OF 32 RULES (Based on World Cup 2026 format)
+# ROUND OF 32 RULES
 # =============================================================
 ROUND32_FIXED = {
     "M73": ("2A", "2B"),
@@ -149,7 +146,7 @@ ROUND32_THIRD_SLOTS = {
 }
 
 
-def extrair_time(code: str, standings: Dict[str, List[str]]) -> Optional[str]:
+def get_team(code: str, standings: Dict[str, List[str]]) -> Optional[str]:
     """
     Convert codes like 1A, 2B, 3C into team names based on group standings.
     """
@@ -164,7 +161,7 @@ def extrair_time(code: str, standings: Dict[str, List[str]]) -> Optional[str]:
     return standings[group][idx]
 
 
-def distribuir_terceiros_nos_jogos(
+def distribute_third_places(
     qualified: List[Tuple[str, str]],
 ) -> Tuple[Optional[Dict[str, Tuple[str, str]]], Optional[str]]:
     """
@@ -212,7 +209,7 @@ def distribuir_terceiros_nos_jogos(
     return assignment, None
 
 
-def montar_round32(
+def build_round32(
     standings: Dict[str, List[str]],
     qualified_thirds: List[Tuple[str, str]],
 ):
@@ -221,7 +218,7 @@ def montar_round32(
       match_id -> (team1, team2, textual_description)
     for matches M73..M88.
     """
-    jogos_terceiros, err = distribuir_terceiros_nos_jogos(qualified_thirds)
+    jogos_terceiros, err = distribute_third_places(qualified_thirds)
     if err:
         return {}, err
 
@@ -229,13 +226,13 @@ def montar_round32(
 
     # fixed games (no 3rd-placed teams)
     for mid, (code1, code2) in ROUND32_FIXED.items():
-        t1 = extrair_time(code1, standings)
-        t2 = extrair_time(code2, standings)
+        t1 = get_team(code1, standings)
+        t2 = get_team(code2, standings)
         jogos[mid] = (t1, t2, f"{code1} vs {code2}")
 
     # games with 3rd-placed teams
     for mid, (code1, _) in ROUND32_THIRD_SLOTS.items():
-        t1 = extrair_time(code1, standings)
+        t1 = get_team(code1, standings)
         group_3, team_3 = jogos_terceiros[mid]
         code2 = f"3{group_3}"
         jogos[mid] = (t1, team_3, f"{code1} vs {code2}")
@@ -270,7 +267,7 @@ SEMIS_MATCHES = {
 }
 
 
-def escolher_vencedor_ui(match_id: str, t1: Optional[str], t2: Optional[str]) -> Optional[str]:
+def choose_winner_ui(match_id: str, t1: Optional[str], t2: Optional[str]) -> Optional[str]:
     if not t1 or not t2:
         st.write("Waiting for teams to be determined…")
         return None
@@ -300,15 +297,10 @@ This app allows you to:
 """
 )
 
-# st.sidebar.header("Group Configuration")
-# with st.sidebar.expander("Current Groups", expanded=False):
-#     for g in GROUP_NAMES:
-#         st.write(f"**Group {g}**: {', '.join(INITIAL_GROUPS[g])}")
-
 # -------------------------------------------------------------
 # GROUP STAGE
 # -------------------------------------------------------------
-standings, errors_groups = montar_classificacao_grupos(INITIAL_GROUPS)
+standings, errors_groups = build_group_classification(INITIAL_GROUPS)
 if errors_groups:
     st.warning("⚠️ Issues found in group standings:")
     for e in errors_groups:
@@ -318,8 +310,8 @@ if errors_groups:
 # -------------------------------------------------------------
 # THIRD-PLACED TEAMS (CHOOSE TOP 8)
 # -------------------------------------------------------------
-thirds = coletar_terceiros(standings)
-qualified_thirds, errors_thirds = escolher_top8_terceiros_ui(thirds)
+thirds = get_third_places(standings)
+qualified_thirds, errors_thirds = pick_top8_third_places_ui(thirds)
 if errors_thirds:
     st.warning("⚠️ Issues in third-placed selection:")
     for e in errors_thirds:
@@ -329,7 +321,7 @@ if errors_thirds:
 # -------------------------------------------------------------
 # ROUND OF 32
 # -------------------------------------------------------------
-jogos_r32, err = montar_round32(standings, qualified_thirds)
+jogos_r32, err = build_round32(standings, qualified_thirds)
 if err:
     st.error("❌ Error generating Round of 32:")
     st.write(err)
@@ -352,7 +344,7 @@ for i, mid in enumerate(order32):
         t1, t2, desc = jogos_r32[mid]
         st.markdown(f"**{mid} – {desc}**")
         st.write(f"{t1} vs {t2}")
-        winners32[mid] = escolher_vencedor_ui(mid, t1, t2)
+        winners32[mid] = choose_winner_ui(mid, t1, t2)
 
 # -------------------------------------------------------------
 # ROUND OF 16
@@ -367,7 +359,7 @@ for i, (mid, (m1, m2)) in enumerate(ROUND16_MATCHES.items()):
         t1 = winners32.get(m1)
         t2 = winners32.get(m2)
         st.markdown(f"**{mid} – Winner {m1} vs Winner {m2}**")
-        winners16[mid] = escolher_vencedor_ui(mid, t1, t2)
+        winners16[mid] = choose_winner_ui(mid, t1, t2)
 
 # -------------------------------------------------------------
 # QUARTERFINALS
@@ -382,7 +374,7 @@ for i, (mid, (m1, m2)) in enumerate(QUARTERS_MATCHES.items()):
         t1 = winners16.get(m1)
         t2 = winners16.get(m2)
         st.markdown(f"**{mid} – Winner {m1} vs Winner {m2}**")
-        winnersQ[mid] = escolher_vencedor_ui(mid, t1, t2)
+        winnersQ[mid] = choose_winner_ui(mid, t1, t2)
 
 # -------------------------------------------------------------
 # SEMIFINALS
@@ -397,7 +389,7 @@ for i, (mid, (m1, m2)) in enumerate(SEMIS_MATCHES.items()):
         t1 = winnersQ.get(m1)
         t2 = winnersQ.get(m2)
         st.markdown(f"**{mid} – Winner {m1} vs Winner {m2}**")
-        winnersS[mid] = escolher_vencedor_ui(mid, t1, t2)
+        winnersS[mid] = choose_winner_ui(mid, t1, t2)
 
 # -------------------------------------------------------------
 # THIRD PLACE & FINAL
@@ -424,7 +416,7 @@ with col3:
         sf2_loser = sf2_t2 if sf2_winner == sf2_t1 else sf2_t1
 
         st.write(f"{sf1_loser} vs {sf2_loser}")
-        third_place_winner = escolher_vencedor_ui(
+        third_place_winner = choose_winner_ui(
             "M103 (Third Place)", sf1_loser, sf2_loser
         )
         if third_place_winner:
@@ -437,7 +429,7 @@ with colF:
     st.subheader("Final")
     tf1 = winnersS.get("M101")
     tf2 = winnersS.get("M102")
-    champion = escolher_vencedor_ui("M104 (Final)", tf1, tf2)
+    champion = choose_winner_ui("M104 (Final)", tf1, tf2)
     if champion:
         st.success(f"🏆 World Cup 2026 Champion: **{champion}**")
 
