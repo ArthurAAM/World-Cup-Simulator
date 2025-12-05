@@ -300,10 +300,10 @@ This app allows you to:
 """
 )
 
-st.sidebar.header("Group Configuration")
-with st.sidebar.expander("Current Groups", expanded=False):
-    for g in GROUP_NAMES:
-        st.write(f"**Group {g}**: {', '.join(INITIAL_GROUPS[g])}")
+# st.sidebar.header("Group Configuration")
+# with st.sidebar.expander("Current Groups", expanded=False):
+#     for g in GROUP_NAMES:
+#         st.write(f"**Group {g}**: {', '.join(INITIAL_GROUPS[g])}")
 
 # -------------------------------------------------------------
 # GROUP STAGE
